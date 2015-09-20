@@ -1,0 +1,217 @@
+#!/usr/local/bin/bash
+# required packages
+#  - wakeonlan
+#  - curl
+#  - egrep
+# 
+# params
+#  -i --ip the IP address of the device
+#  -a --auth     the PIN that was displayed 
+#  -m --mac     the MAC address of the device (ethernet port; wifi does not work), only required to power on the device
+
+
+DEFAULT_CONFIG_LOCATION=$HOME/.sony-device-control/default
+APP_NAME="SonyDeviceControlCLI"
+REGISTER_DATA="{\"id\":13,\"method\":\"actRegister\",\"version\":\"1.0\",\"params\":[{\"clientid\":\"$APP_NAME:1\",\"nickname\":\"$APP_NAME\"},[{\"clientid\":\"$APP_NAME:1\",\"value\":\"yes\",\"nickname\":\"T$APP_NAME\",\"function\":\"WOL\"}]]}"
+
+declare -A COMMAND_LIST
+
+COMMAND_LIST[poweroff]="AAAAAQAAAAEAAAAvAw=="
+COMMAND_LIST[input]="AAAAAQAAAAEAAAAlAw=="
+COMMAND_LIST[gguide]="AAAAAQAAAAEAAAAOAw=="
+COMMAND_LIST[epg]="AAAAAgAAAKQAAABbAw=="
+COMMAND_LIST[favorites]="AAAAAgAAAHcAAAB2Aw=="
+COMMAND_LIST[display]="AAAAAQAAAAEAAAA6Aw=="
+COMMAND_LIST[home]="AAAAAQAAAAEAAABgAw=="
+COMMAND_LIST[options]="AAAAAgAAAJcAAAA2Aw=="
+COMMAND_LIST[return]="AAAAAgAAAJcAAAAjAw=="
+COMMAND_LIST[up]="AAAAAQAAAAEAAAB0Aw=="
+COMMAND_LIST[down]="AAAAAQAAAAEAAAB1Aw=="
+COMMAND_LIST[right]="AAAAAQAAAAEAAAAzAw=="
+COMMAND_LIST[left]="AAAAAQAAAAEAAAA0Aw=="
+COMMAND_LIST[confirm]="AAAAAQAAAAEAAABlAw=="
+COMMAND_LIST[red]="AAAAAgAAAJcAAAAlAw=="
+COMMAND_LIST[green]="AAAAAgAAAJcAAAAmAw=="
+COMMAND_LIST[yellow]="AAAAAgAAAJcAAAAnAw=="
+COMMAND_LIST[blue]="AAAAAgAAAJcAAAAkAw=="
+COMMAND_LIST[num1]="AAAAAQAAAAEAAAAAAw=="
+COMMAND_LIST[num2]="AAAAAQAAAAEAAAABAw=="
+COMMAND_LIST[num3]="AAAAAQAAAAEAAAACAw=="
+COMMAND_LIST[num4]="AAAAAQAAAAEAAAADAw=="
+COMMAND_LIST[num5]="AAAAAQAAAAEAAAAEAw=="
+COMMAND_LIST[num6]="AAAAAQAAAAEAAAAFAw=="
+COMMAND_LIST[num7]="AAAAAQAAAAEAAAAGAw=="
+COMMAND_LIST[num8]="AAAAAQAAAAEAAAAHAw=="
+COMMAND_LIST[num9]="AAAAAQAAAAEAAAAIAw=="
+COMMAND_LIST[num0]="AAAAAQAAAAEAAAAJAw=="
+COMMAND_LIST[num11]="AAAAAQAAAAEAAAAKAw=="
+COMMAND_LIST[num12]="AAAAAQAAAAEAAAALAw=="
+COMMAND_LIST[volumeup]="AAAAAQAAAAEAAAASAw=="
+COMMAND_LIST[volumedown]="AAAAAQAAAAEAAAATAw=="
+COMMAND_LIST[mute]="AAAAAQAAAAEAAAAUAw=="
+COMMAND_LIST[channelup]="AAAAAQAAAAEAAAAQAw=="
+COMMAND_LIST[channeldown]="AAAAAQAAAAEAAAARAw=="
+COMMAND_LIST[subtitle]="AAAAAgAAAJcAAAAoAw=="
+COMMAND_LIST[closedcaption]="AAAAAgAAAKQAAAAQAw=="
+COMMAND_LIST[enter]="AAAAAQAAAAEAAAALAw=="
+COMMAND_LIST[dot]="AAAAAgAAAJcAAAAdAw=="
+COMMAND_LIST[analog]="AAAAAgAAAHcAAAANAw=="
+COMMAND_LIST[teletext]="AAAAAQAAAAEAAAA/Aw=="
+COMMAND_LIST[exit]="AAAAAQAAAAEAAABjAw=="
+COMMAND_LIST[analog2]="AAAAAQAAAAEAAAA4Aw=="
+COMMAND_LIST[starad]="AAAAAgAAABoAAAA7Aw==" #*ad
+COMMAND_LIST[digital]="AAAAAgAAAJcAAAAyAw=="
+COMMAND_LIST[analogq]="AAAAAgAAAJcAAAAuAw==" #analog?
+COMMAND_LIST[bs]="AAAAAgAAAJcAAAAsAw=="
+COMMAND_LIST[cs]="AAAAAgAAAJcAAAArAw=="
+COMMAND_LIST[bscs]="AAAAAgAAAJcAAAAQAw=="
+COMMAND_LIST[ddata]="AAAAAgAAAJcAAAAVAw=="
+COMMAND_LIST[picoff]="AAAAAQAAAAEAAAA+Aw=="
+COMMAND_LIST[Tv_Radio]="AAAAAgAAABoAAABXAw=="
+COMMAND_LIST[Theater]="AAAAAgAAAHcAAABgAw=="
+COMMAND_LIST[SEN]="AAAAAgAAABoAAAB9Aw=="
+COMMAND_LIST[InternetWidgets]="AAAAAgAAABoAAAB6Aw=="
+COMMAND_LIST[InternetVideo]="AAAAAgAAABoAAAB5Aw=="
+COMMAND_LIST[Netflix]="AAAAAgAAABoAAAB8Aw=="
+COMMAND_LIST[SceneSelect]="AAAAAgAAABoAAAB4Aw=="
+COMMAND_LIST[Mode3D]="AAAAAgAAAHcAAABNAw=="
+COMMAND_LIST[iManual]="AAAAAgAAABoAAAB7Aw=="
+COMMAND_LIST[Audio]="AAAAAQAAAAEAAAAXAw=="
+COMMAND_LIST[Wide]="AAAAAgAAAKQAAAA9Aw=="
+COMMAND_LIST[Jump]="AAAAAQAAAAEAAAA7Aw=="
+COMMAND_LIST[PAP]="AAAAAgAAAKQAAAB3Aw=="
+COMMAND_LIST[MyEPG]="AAAAAgAAAHcAAABrAw=="
+COMMAND_LIST[ProgramDescription]="AAAAAgAAAJcAAAAWAw=="
+COMMAND_LIST[WriteChapter]="AAAAAgAAAHcAAABsAw=="
+COMMAND_LIST[TrackID]="AAAAAgAAABoAAAB+Aw=="
+COMMAND_LIST[TenKey]="AAAAAgAAAJcAAAAMAw=="
+COMMAND_LIST[AppliCast]="AAAAAgAAABoAAABvAw=="
+COMMAND_LIST[acTVila]="AAAAAgAAABoAAAByAw=="
+COMMAND_LIST[DeleteVideo]="AAAAAgAAAHcAAAAfAw=="
+COMMAND_LIST[PhotoFrame]="AAAAAgAAABoAAABVAw=="
+COMMAND_LIST[TvPause]="AAAAAgAAABoAAABnAw=="
+COMMAND_LIST[KeyPad]="AAAAAgAAABoAAAB1Aw=="
+COMMAND_LIST[Media]="AAAAAgAAAJcAAAA4Aw=="
+COMMAND_LIST[SyncMenu]="AAAAAgAAABoAAABYAw=="
+COMMAND_LIST[Forward]="AAAAAgAAAJcAAAAcAw=="
+COMMAND_LIST[Play]="AAAAAgAAAJcAAAAaAw=="
+COMMAND_LIST[Rewind]="AAAAAgAAAJcAAAAbAw=="
+COMMAND_LIST[Prev]="AAAAAgAAAJcAAAA8Aw=="
+COMMAND_LIST[Stop]="AAAAAgAAAJcAAAAYAw=="
+COMMAND_LIST[Next]="AAAAAgAAAJcAAAA9Aw=="
+COMMAND_LIST[Rec]="AAAAAgAAAJcAAAAgAw=="
+COMMAND_LIST[Pause]="AAAAAgAAAJcAAAAZAw=="
+COMMAND_LIST[Eject]="AAAAAgAAAJcAAABIAw=="
+COMMAND_LIST[FlashPlus]="AAAAAgAAAJcAAAB4Aw=="
+COMMAND_LIST[FlashMinus]="AAAAAgAAAJcAAAB5Aw=="
+COMMAND_LIST[TopMenu]="AAAAAgAAABoAAABgAw=="
+COMMAND_LIST[PopUpMenu]="AAAAAgAAABoAAABhAw=="
+COMMAND_LIST[RakurakuStart]="AAAAAgAAAHcAAABqAw=="
+COMMAND_LIST[OneTouchTimeRec]="AAAAAgAAABoAAABkAw=="
+COMMAND_LIST[OneTouchView]="AAAAAgAAABoAAABlAw=="
+COMMAND_LIST[OneTouchRec]="AAAAAgAAABoAAABiAw=="
+COMMAND_LIST[OneTouchStop]="AAAAAgAAABoAAABjAw=="
+
+while [[ $# > 1 ]]
+do
+key="$1"
+
+case $key in
+    -i|--ip)
+    DEVICE_IP="$2"
+    shift # past argument
+    ;;
+    -a|--auth)
+    PIN="$2"
+    shift # past argument
+    ;;
+    -m|--mac)
+    MAC="$2"
+    shift # past argument
+    ;;
+    -c|--config)
+    CONFIG_PATH="$2"
+    shift # past argument
+    ;;
+    *)
+            # unknown option
+    ;;
+esac
+shift # past argument or value
+done
+
+# convert command to lowercase
+COMMAND=`echo $1 | tr '[:upper:]' '[:lower:]'`
+
+
+CONFIG_LOCATION=$DEFAULT_CONFIG_LOCATION
+if [[ ! -z "$CONFIG_LOCATION" ]]; then
+   CONFIG_LOCATION=$CONFIG_PATH
+   if [ ! -e "$CONFIG_LOCATION" ]; then 
+       >&2 echo "Config file $CONFIG_LOCATION not found"
+   fi
+fi
+
+if [ -e "$CONFIG_LOCATION" ]; then
+   echo "Using config $CONFIG_LOCATION"
+   source $CONFIG_LOCATION
+fi
+
+# echo "======"
+# echo path $CONFIG_PATH
+# echo ip $DEVICE_IP
+# echo command $COMMAND
+# echo mac $MAC
+# echo default config $DEFAULT_CONFIG_LOCATION
+# echo "======"
+
+if [[ -z $DEVICE_IP ]]; then
+  >&2 echo "Please provide the IP address of your device"
+  exit -1
+fi
+
+# handle special command poweron
+if [ "$COMMAND" = "poweron" ]; then
+   if [[ -z  $MAC  ]]; then
+      >&2 echo "Please provide the MAC address of your device"
+      exit -1
+   fi
+   wakeonlan $MAC > /dev/null
+elif [ "$COMMAND" = "register" ]; then
+   # register command
+   echo "Registering $APP_NAME"
+   curl -X POST $DEVICE_IP/sony/accessControl --data $REGISTER_DATA -s -D - -o /dev/null
+   echo Please enter the displayed PIN and press enter.
+   read PIN
+   RESPONSE_HEADERS=`curl -X POST $DEVICE_IP/sony/accessControl --data $REGISTER_DATA --user :$PIN -D - -s -o /dev/null`
+   AUTH=`echo $RESPONSE_HEADERS | egrep -o 'auth=([^;]*)'`
+   echo $AUTH
+   echo "Save config (y/N)?"
+   read TO_SAVE
+   
+   if [ "$TO_SAVE" = "y" ]; then
+       echo "Enter the location where to save the config file (default: $DEFAULT_CONFIG_LOCATION)"
+       read SAVE_PATH
+       if [[ -z $SAVE_PATH ]]; then
+           SAVE_PATH=$DEFAULT_CONFIG_LOCATION
+       fi
+       
+       SAVE_DIR=`dirname $SAVE_PATH`
+       mkdir -p $SAVE_DIR
+       
+       echo "DEVICE_IP=\"$DEVICE_IP\"" > $SAVE_PATH
+       echo "MAC=\"$MAC\"" >> $SAVE_PATH
+       echo "AUTH=\"$AUTH\"" >> $SAVE_PATH
+       echo "Saved config to $SAVE_PATH"
+   fi
+else
+    if [[ -z $AUTH ]]; then
+      >&2 echo "Please provide the auth of your device"
+      exit -1
+    fi
+    
+    COMMAND_CODE=${COMMAND_LIST[$COMMAND]}
+    COMMAND_DATA="<?xml version=\"1.0\"?><s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\" s:encodingStyle=\"http://schemas.xmlsoap.org/soap/encoding/\"><s:Body><u:X_SendIRCC xmlns:u=\"urn:schemas-sony-com:service:IRCC:1\"><IRCCCode>$COMMAND_CODE</IRCCCode></u:X_SendIRCC></s:Body></s:Envelope>"
+    
+    echo $COMMAND_DATA | curl -X POST $DEVICE_IP/sony/IRCC --cookie $AUTH --data @- -o /dev/null -s
+fi
