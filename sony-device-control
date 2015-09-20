@@ -145,7 +145,7 @@ COMMAND=`echo $1 | tr '[:upper:]' '[:lower:]'`
 
 
 CONFIG_LOCATION=$DEFAULT_CONFIG_LOCATION
-if [[ ! -z "$CONFIG_LOCATION" ]]; then
+if [[ ! -z "$CONFIG_PATH" ]]; then
    CONFIG_LOCATION=$CONFIG_PATH
    if [ ! -e "$CONFIG_LOCATION" ]; then 
        >&2 echo "Config file $CONFIG_LOCATION not found"
