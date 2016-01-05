@@ -170,7 +170,7 @@ if [[ -z $DEVICE_IP ]]; then
   exit -1
 fi
 
-function authentication {
+function authenticate {
   PIN=$1
   RESPONSE_HEADERS=`curl -X POST $DEVICE_IP/sony/accessControl --data $REGISTER_DATA --user :$PIN -D - $DEBUG`
   AUTH=`echo $RESPONSE_HEADERS | egrep -o 'auth=([^;]*)'`
@@ -190,7 +190,7 @@ elif [ "$COMMAND" = "register" ]; then
    curl -X POST $DEVICE_IP/sony/accessControl --data $REGISTER_DATA -s -D - -o /dev/null
    echo Please enter the displayed PIN and press enter.
    read PIN
-   authentication $PIN
+   authenticate $PIN
    echo "Save config (y/N)?"
    read TO_SAVE
    
@@ -210,7 +210,7 @@ elif [ "$COMMAND" = "register" ]; then
        echo "Saved config to $SAVE_PATH"
    fi
 else
-    AUTH=$(authentication $PIN)
+    AUTH=$(authenticate $PIN)
     
     if [[ -z $AUTH ]]; then
       >&2 echo "Please provide the auth of your device"
