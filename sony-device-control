@@ -10,6 +10,14 @@
 #  -m --mac     the MAC address of the device (ethernet port; wifi does not work), only required to power on the device
 
 
+if [ "$#" -eq 0 ]; then
+    echo "Illegal number of parameters"
+    exit -1
+fi
+
+DEBUG=""
+DEBUG="-s -o /dev/null"
+
 DEFAULT_CONFIG_LOCATION=$HOME/.sony-device-control/default
 APP_NAME="SonyDeviceControlCLI"
 REGISTER_DATA="{\"id\":13,\"method\":\"actRegister\",\"version\":\"1.0\",\"params\":[{\"clientid\":\"$APP_NAME:1\",\"nickname\":\"$APP_NAME\"},[{\"clientid\":\"$APP_NAME:1\",\"value\":\"yes\",\"nickname\":\"T$APP_NAME\",\"function\":\"WOL\"}]]}"
@@ -157,18 +165,17 @@ if [ -e "$CONFIG_LOCATION" ]; then
    source $CONFIG_LOCATION
 fi
 
-# echo "======"
-# echo path $CONFIG_PATH
-# echo ip $DEVICE_IP
-# echo command $COMMAND
-# echo mac $MAC
-# echo default config $DEFAULT_CONFIG_LOCATION
-# echo "======"
-
 if [[ -z $DEVICE_IP ]]; then
   >&2 echo "Please provide the IP address of your device"
   exit -1
 fi
+
+function authentication {
+  PIN=$1
+  RESPONSE_HEADERS=`curl -X POST $DEVICE_IP/sony/accessControl --data $REGISTER_DATA --user :$PIN -D - $DEBUG`
+  AUTH=`echo $RESPONSE_HEADERS | egrep -o 'auth=([^;]*)'`
+  echo $AUTH
+}
 
 # handle special command poweron
 if [ "$COMMAND" = "poweron" ]; then
@@ -183,9 +190,7 @@ elif [ "$COMMAND" = "register" ]; then
    curl -X POST $DEVICE_IP/sony/accessControl --data $REGISTER_DATA -s -D - -o /dev/null
    echo Please enter the displayed PIN and press enter.
    read PIN
-   RESPONSE_HEADERS=`curl -X POST $DEVICE_IP/sony/accessControl --data $REGISTER_DATA --user :$PIN -D - -s -o /dev/null`
-   AUTH=`echo $RESPONSE_HEADERS | egrep -o 'auth=([^;]*)'`
-   echo $AUTH
+   authentication $PIN
    echo "Save config (y/N)?"
    read TO_SAVE
    
@@ -201,10 +206,12 @@ elif [ "$COMMAND" = "register" ]; then
        
        echo "DEVICE_IP=\"$DEVICE_IP\"" > $SAVE_PATH
        echo "MAC=\"$MAC\"" >> $SAVE_PATH
-       echo "AUTH=\"$AUTH\"" >> $SAVE_PATH
+       echo "PIN=\"$PIN\"" >> $SAVE_PATH
        echo "Saved config to $SAVE_PATH"
    fi
 else
+    AUTH=$(authentication $PIN)
+    
     if [[ -z $AUTH ]]; then
       >&2 echo "Please provide the auth of your device"
       exit -1
@@ -213,5 +220,5 @@ else
     COMMAND_CODE=${COMMAND_LIST[$COMMAND]}
     COMMAND_DATA="<?xml version=\"1.0\"?><s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\" s:encodingStyle=\"http://schemas.xmlsoap.org/soap/encoding/\"><s:Body><u:X_SendIRCC xmlns:u=\"urn:schemas-sony-com:service:IRCC:1\"><IRCCCode>$COMMAND_CODE</IRCCCode></u:X_SendIRCC></s:Body></s:Envelope>"
     
-    echo $COMMAND_DATA | curl -X POST $DEVICE_IP/sony/IRCC --cookie $AUTH --data @- -o /dev/null -s
+    echo $COMMAND_DATA | curl -X POST $DEVICE_IP/sony/IRCC --cookie $AUTH --data @- $DEBUG
 fi
