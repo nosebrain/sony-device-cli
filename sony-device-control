@@ -15,7 +15,6 @@ if [ "$#" -eq 0 ]; then
     exit -1
 fi
 
-DEBUG=""
 DEBUG="-s -o /dev/null"
 
 DEFAULT_CONFIG_LOCATION=$HOME/.sony-device-control/default
